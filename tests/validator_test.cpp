@@ -384,6 +384,106 @@ BOOST_AUTO_TEST_CASE(
       validation_phase::constraint_validation));
 }
 
+BOOST_AUTO_TEST_CASE(
+    validate_perpetual_bond_rejects_maturity_date_when_flag_true) {
+  const arguments_t args = {{"is_perpetual", bool{true}},
+                            {"maturity_date", make_date(2030, 12, 31)}};
+
+  const std::vector<validation_rule> rules = {
+      {.key = "is_perpetual",
+       .required = false,
+       .supported_types = {data_type::boolean}},
+      {.key = "maturity_date",
+       .required = false,
+       .supported_types = {data_type::date},
+       .cross_validator = [](const data_t &, const arguments_t &all_args) {
+         validation_result result{.key = "maturity_date"};
+
+         const auto perpetual_it = all_args.find("is_perpetual");
+         const bool is_perpetual = perpetual_it != all_args.end() &&
+                                   std::get<bool>(perpetual_it->second);
+         if (is_perpetual) {
+           result.errors.push_back(
+               "maturity_date must not be provided when is_perpetual is true");
+         }
+
+         return result;
+       }}};
+
+  const auto report = validator::validate_and_finalize(args, rules);
+
+  BOOST_TEST(!report.ok());
+  BOOST_TEST(has_issue(
+      report, "maturity_date", validation_issue_code::cross_validation_failed,
+      "maturity_date must not be provided when is_perpetual is true",
+      validation_phase::cross_validation));
+}
+
+BOOST_AUTO_TEST_CASE(
+    validate_perpetual_bond_allows_maturity_date_when_flag_false) {
+  const arguments_t args = {{"is_perpetual", bool{false}},
+                            {"maturity_date", make_date(2030, 12, 31)}};
+
+  const std::vector<validation_rule> rules = {
+      {.key = "is_perpetual",
+       .required = false,
+       .supported_types = {data_type::boolean}},
+      {.key = "maturity_date",
+       .required = false,
+       .supported_types = {data_type::date},
+       .cross_validator = [](const data_t &, const arguments_t &all_args) {
+         validation_result result{.key = "maturity_date"};
+
+         const auto perpetual_it = all_args.find("is_perpetual");
+         const bool is_perpetual = perpetual_it != all_args.end() &&
+                                   std::get<bool>(perpetual_it->second);
+         if (is_perpetual) {
+           result.errors.push_back(
+               "maturity_date must not be provided when is_perpetual is true");
+         }
+
+         return result;
+       }}};
+
+  const auto report = validator::validate_and_finalize(args, rules);
+
+  BOOST_TEST(report.ok());
+  BOOST_TEST(report.arguments.contains("is_perpetual"));
+  BOOST_TEST(report.arguments.contains("maturity_date"));
+}
+
+BOOST_AUTO_TEST_CASE(
+    validate_perpetual_bond_allows_maturity_date_when_flag_missing) {
+  const arguments_t args = {{"maturity_date", make_date(2030, 12, 31)}};
+
+  const std::vector<validation_rule> rules = {
+      {.key = "is_perpetual",
+       .required = false,
+       .supported_types = {data_type::boolean}},
+      {.key = "maturity_date",
+       .required = false,
+       .supported_types = {data_type::date},
+       .cross_validator = [](const data_t &, const arguments_t &all_args) {
+         validation_result result{.key = "maturity_date"};
+
+         const auto perpetual_it = all_args.find("is_perpetual");
+         const bool is_perpetual = perpetual_it != all_args.end() &&
+                                   std::get<bool>(perpetual_it->second);
+         if (is_perpetual) {
+           result.errors.push_back(
+               "maturity_date must not be provided when is_perpetual is true");
+         }
+
+         return result;
+       }}};
+
+  const auto report = validator::validate_and_finalize(args, rules);
+
+  BOOST_TEST(report.ok());
+  BOOST_TEST(!report.arguments.contains("is_perpetual"));
+  BOOST_TEST(report.arguments.contains("maturity_date"));
+}
+
 BOOST_AUTO_TEST_CASE(validate_fixed_coupon_bond_arguments) {
   const arguments_t args = {{"issuer", std::string{"ACME_CORP"}},
                             {"par_value", double{100.0}},
